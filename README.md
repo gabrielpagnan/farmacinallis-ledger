@@ -1,73 +1,73 @@
-# Welcome to your Lovable project
+# Farmacinallis Ledger
 
-## Project info
+Sistema de Gestão de Matérias-Primas para Farmácias de Manipulação
 
-**URL**: https://lovable.dev/projects/c5e8d2b0-1397-4671-8329-fa24c99c6494
+---
 
-## How can I edit this code?
+## Descrição
 
-There are several ways of editing your application.
+Este projeto é um sistema web para controle de transações de matérias-primas em farmácias de manipulação. Permite registrar compras e vendas, visualizar saldos, editar e excluir transações de forma simples e intuitiva.
 
-**Use Lovable**
+## Funcionalidades
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/c5e8d2b0-1397-4671-8329-fa24c99c6494) and start prompting.
+- Cadastro de transações (compra/venda) de matérias-primas
+- Listagem de transações recentes
+- Busca por farmácia ou matéria-prima
+- Edição inline de transações (botão de lápis)
+- Exclusão de transações com confirmação (botão de lixeira)
+- Cálculo automático de saldos por farmácia
+- Interface responsiva e moderna
 
-Changes made via Lovable will be committed automatically to this repo.
+## Tecnologias Utilizadas
 
-**Use your preferred IDE**
+- [React](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Vite](https://vitejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [shadcn/ui](https://ui.shadcn.com/)
+- [Supabase](https://supabase.com/) (backend e banco de dados)
+- [lucide-react](https://lucide.dev/) (ícones)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Instalação e Uso
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. **Clone o repositório:**
+   ```sh
+   git clone https://github.com/gabrielpagnan/farmacinallis-ledger.git
+   cd farmacinallis-ledger
+   ```
+2. **Instale as dependências:**
+   ```sh
+   npm install
+   ```
+3. **Configure o Supabase:**
+   - Crie um projeto no [Supabase](https://supabase.com/)
+   - Configure as variáveis de ambiente conforme necessário (veja `.env.example` se existir)
+   - Certifique-se de que a tabela `transactions` está criada conforme o modelo usado no código
+4. **Rode o projeto localmente:**
+   ```sh
+   npm run dev
+   ```
+5. **Acesse no navegador:**
+   - Normalmente em `http://localhost:5173`
 
-Follow these steps:
+## Estrutura Principal
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+- `src/pages/Dashboard.tsx`: Tela principal com cadastro, listagem, edição e exclusão de transações
+- `src/components/`: Componentes reutilizáveis da interface
+- `supabase/`: Configurações e integrações com o Supabase
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## Como Contribuir
 
-# Step 3: Install the necessary dependencies.
-npm i
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature ou correção: `git checkout -b minha-feature`
+3. Commit suas alterações: `git commit -m 'feat: minha nova feature'`
+4. Push para o seu fork: `git push origin minha-feature`
+5. Abra um Pull Request neste repositório
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## Licença
 
-**Edit a file directly in GitHub**
+Este projeto está sob a licença MIT. Veja o arquivo LICENSE para mais detalhes.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/c5e8d2b0-1397-4671-8329-fa24c99c6494) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Dúvidas ou sugestões? Abra uma issue ou entre em contato!
