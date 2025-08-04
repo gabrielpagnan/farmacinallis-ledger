@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
-import { CalendarIcon, Plus, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { CalendarIcon, Plus, Search, TrendingUp, TrendingDown, Trash, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -51,6 +51,8 @@ const Dashboard = () => {
   });
 
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any>(null);
 
   useEffect(() => {
     fetchTransactions();
@@ -172,6 +174,73 @@ const Dashboard = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleDeleteTransaction = async (id: string) => {
+    const confirmed = window.confirm('Tem certeza que deseja excluir esta transação?');
+    if (!confirmed) return;
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      toast({
+        title: 'Transação excluída com sucesso!',
+      });
+      fetchTransactions();
+      calculatePharmacyBalances();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao excluir transação',
+        description: error.message,
+      });
+    }
+  };
+
+  const handleEditClick = (transaction: Transaction) => {
+    setEditingId(transaction.id);
+    setEditForm({
+      ...transaction,
+      transaction_date: transaction.transaction_date ? new Date(transaction.transaction_date) : new Date(),
+    });
+  };
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  const handleEditSave = async () => {
+    try {
+      const { error } = await supabase
+        .from('transactions')
+        .update({
+          ...editForm,
+          transaction_date: editForm.transaction_date instanceof Date ? format(editForm.transaction_date, 'yyyy-MM-dd') : editForm.transaction_date,
+          quantity: parseFloat(editForm.quantity),
+          unit_price: parseFloat(editForm.unit_price),
+          total_value: parseFloat(editForm.unit_price),
+        })
+        .eq('id', editingId);
+      if (error) throw error;
+      toast({ title: 'Transação atualizada com sucesso!' });
+      setEditingId(null);
+      setEditForm(null);
+      fetchTransactions();
+      calculatePharmacyBalances();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao atualizar transação',
+        description: error.message,
+      });
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditForm(null);
   };
 
   const filteredTransactions = transactions.filter(transaction =>
@@ -333,7 +402,7 @@ const Dashboard = () => {
 
               {/* Quantidade */}
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantidade</Label>
+                <Label htmlFor="quantity">Quantidade (g)</Label>
                 <Input
                   id="quantity"
                   type="number"
@@ -347,9 +416,9 @@ const Dashboard = () => {
                 />
               </div>
 
-              {/* Valor Unitário */}
+              {/* Valor */}
               <div className="space-y-2">
-                <Label htmlFor="unit_price">Valor Unitário (R$)</Label>
+                <Label htmlFor="unit_price">Valor</Label>
                 <Input
                   id="unit_price"
                   type="number"
@@ -408,38 +477,118 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-2">
               {filteredTransactions.slice(0, 10).map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <span
-                        className={cn(
+                editingId === transaction.id ? (
+                  <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg bg-accent/30">
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <span className={cn(
                           "px-2 py-1 rounded text-xs font-medium",
-                          transaction.transaction_type === 'compra'
+                          editForm.transaction_type === 'compra'
                             ? "bg-red-100 text-red-800"
                             : "bg-green-100 text-green-800"
-                        )}
-                      >
-                        {transaction.transaction_type === 'compra' ? 'Compra' : 'Venda'}
-                      </span>
-                      <span className="font-medium">{transaction.pharmacy_name}</span>
+                        )}>
+                          {editForm.transaction_type === 'compra' ? 'Compra' : 'Venda'}
+                        </span>
+                        <input
+                          className="font-medium border rounded px-2 py-1 text-sm"
+                          name="pharmacy_name"
+                          value={editForm.pharmacy_name}
+                          onChange={handleEditChange}
+                        />
+                      </div>
+                      <input
+                        className="text-sm text-muted-foreground border rounded px-2 py-1"
+                        name="raw_material_name"
+                        value={editForm.raw_material_name}
+                        onChange={handleEditChange}
+                      />
+                      <input
+                        className="text-xs text-muted-foreground border rounded px-2 py-1"
+                        name="transaction_date"
+                        type="date"
+                        value={editForm.transaction_date instanceof Date ? format(editForm.transaction_date, 'yyyy-MM-dd') : editForm.transaction_date}
+                        onChange={handleEditChange}
+                      />
+                      <div className="flex gap-2">
+                        <input
+                          className="text-xs text-muted-foreground border rounded px-2 py-1 w-24"
+                          name="quantity"
+                          type="number"
+                          step="0.001"
+                          value={editForm.quantity}
+                          onChange={handleEditChange}
+                          placeholder="Quantidade (g)"
+                        />
+                        <input
+                          className="text-xs text-muted-foreground border rounded px-2 py-1 w-24"
+                          name="unit_price"
+                          type="number"
+                          step="0.01"
+                          value={editForm.unit_price}
+                          onChange={handleEditChange}
+                          placeholder="Valor"
+                        />
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      {transaction.raw_material_name} • {transaction.quantity} unidades
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(transaction.transaction_date), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
+                    <div className="flex flex-col gap-2 ml-2">
+                      <Button size="sm" onClick={handleEditSave} className="bg-green-600 text-white">Salvar</Button>
+                      <Button size="sm" variant="secondary" onClick={handleEditCancel}>Cancelar</Button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold">R$ {transaction.total_value.toFixed(2)}</p>
-                    <p className="text-xs text-muted-foreground">
-                      R$ {transaction.unit_price.toFixed(2)}/un
-                    </p>
+                ) : (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span
+                          className={cn(
+                            "px-2 py-1 rounded text-xs font-medium",
+                            transaction.transaction_type === 'compra'
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
+                          )}
+                        >
+                          {transaction.transaction_type === 'compra' ? 'Compra' : 'Venda'}
+                        </span>
+                        <span className="font-medium">{transaction.pharmacy_name}</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {transaction.raw_material_name} • {transaction.quantity} unidades
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(transaction.transaction_date), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <p className="font-bold">R$ {transaction.total_value.toFixed(2)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          R$ {transaction.unit_price.toFixed(2)}/un
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-2"
+                        title="Editar transação"
+                        onClick={() => handleEditClick(transaction)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        className="ml-2"
+                        title="Excluir transação"
+                        onClick={() => handleDeleteTransaction(transaction.id)}
+                      >
+                        <Trash className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
+                )
               ))}
             </div>
           )}
