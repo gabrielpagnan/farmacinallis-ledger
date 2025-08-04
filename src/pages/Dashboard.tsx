@@ -12,6 +12,7 @@ import { CalendarIcon, Plus, Search, TrendingUp, TrendingDown, Trash, Pencil } f
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import RegisterTransaction from './RegisterTransaction';
 
 interface Transaction {
   id: string;
@@ -48,6 +49,7 @@ const Dashboard = () => {
     raw_material_name: '',
     quantity: '',
     unit_price: '',
+    total_value: '',
   });
 
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -125,7 +127,7 @@ const Dashboard = () => {
     setIsLoading(true);
 
     try {
-      const total_value = parseFloat(formData.quantity) * parseFloat(formData.unit_price);
+      const total_value = formData.total_value ? parseFloat(formData.total_value) : (parseFloat(formData.quantity) * parseFloat(formData.unit_price));
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
@@ -160,6 +162,7 @@ const Dashboard = () => {
         raw_material_name: '',
         quantity: '',
         unit_price: '',
+        total_value: '',
       });
 
       // Refresh data
@@ -207,12 +210,28 @@ const Dashboard = () => {
     });
   };
 
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setEditForm({ ...editForm, [e.target.name]: e.target.value });
-  };
+  // Substituir handleEditChange por uma função sincronizadora
+  function handleEditFormChange(field: string, value: string) {
+    let newEditForm = { ...editForm, [field]: value };
+    if (field === 'quantity' || field === 'unit_price') {
+      const q = parseFloat(field === 'quantity' ? value : newEditForm.quantity);
+      const u = parseFloat(field === 'unit_price' ? value : newEditForm.unit_price);
+      if (!isNaN(q) && !isNaN(u)) {
+        newEditForm.total_value = (q * u).toFixed(2);
+      }
+    } else if (field === 'total_value') {
+      const q = parseFloat(newEditForm.quantity);
+      const t = parseFloat(value);
+      if (!isNaN(q) && q !== 0 && !isNaN(t)) {
+        newEditForm.unit_price = (t / q).toFixed(2);
+      }
+    }
+    setEditForm(newEditForm);
+  }
 
   const handleEditSave = async () => {
     try {
+      const total_value = editForm.total_value ? parseFloat(editForm.total_value) : (parseFloat(editForm.quantity) * parseFloat(editForm.unit_price));
       const { error } = await supabase
         .from('transactions')
         .update({
@@ -220,7 +239,7 @@ const Dashboard = () => {
           transaction_date: editForm.transaction_date instanceof Date ? format(editForm.transaction_date, 'yyyy-MM-dd') : editForm.transaction_date,
           quantity: parseFloat(editForm.quantity),
           unit_price: parseFloat(editForm.unit_price),
-          total_value: parseFloat(editForm.unit_price),
+          total_value,
         })
         .eq('id', editingId);
       if (error) throw error;
@@ -242,6 +261,25 @@ const Dashboard = () => {
     setEditingId(null);
     setEditForm(null);
   };
+
+  // 2. Função auxiliar para sincronizar campos
+  function handleFormDataChange(field: string, value: string) {
+    let newFormData = { ...formData, [field]: value };
+    if (field === 'quantity' || field === 'unit_price') {
+      const q = parseFloat(field === 'quantity' ? value : newFormData.quantity);
+      const u = parseFloat(field === 'unit_price' ? value : newFormData.unit_price);
+      if (!isNaN(q) && !isNaN(u)) {
+        newFormData.total_value = (q * u).toFixed(2);
+      }
+    } else if (field === 'total_value') {
+      const q = parseFloat(newFormData.quantity);
+      const t = parseFloat(value);
+      if (!isNaN(q) && q !== 0 && !isNaN(t)) {
+        newFormData.unit_price = (t / q).toFixed(2);
+      }
+    }
+    setFormData(newFormData);
+  }
 
   const filteredTransactions = transactions.filter(transaction =>
     transaction.pharmacy_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -300,159 +338,6 @@ const Dashboard = () => {
         )}
       </div>
 
-      {/* Formulário de Registro */}
-      <Card className="farmacinallis-shadow">
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <Plus className="w-5 h-5" />
-            <span>Registrar Nova Transação</span>
-          </CardTitle>
-          <CardDescription>
-            Registre compras e vendas de matérias-primas
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Data */}
-              <div className="space-y-2">
-                <Label>Data da Transação</Label>
-                <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !formData.transaction_date && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.transaction_date ? (
-                        format(formData.transaction_date, "PPP", { locale: ptBR })
-                      ) : (
-                        "Selecione a data"
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={formData.transaction_date}
-                      onSelect={(date) => {
-                        if (date) {
-                          setFormData({ ...formData, transaction_date: date });
-                          setIsDatePickerOpen(false);
-                        }
-                      }}
-                      disabled={(date) =>
-                        date > new Date() || date < new Date("1900-01-01")
-                      }
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* Tipo de Transação */}
-              <div className="space-y-2">
-                <Label>Tipo de Transação</Label>
-                <Select
-                  value={formData.transaction_type}
-                  onValueChange={(value: 'compra' | 'venda') =>
-                    setFormData({ ...formData, transaction_type: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="compra">Compra (Eu devo)</SelectItem>
-                    <SelectItem value="venda">Venda (Eles devem)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Nome da Farmácia */}
-              <div className="space-y-2">
-                <Label htmlFor="pharmacy_name">Nome da Farmácia</Label>
-                <Input
-                  id="pharmacy_name"
-                  placeholder="Nome da farmácia"
-                  value={formData.pharmacy_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, pharmacy_name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              {/* Nome da Matéria-Prima */}
-              <div className="space-y-2">
-                <Label htmlFor="raw_material_name">Matéria-Prima</Label>
-                <Input
-                  id="raw_material_name"
-                  placeholder="Nome da matéria-prima"
-                  value={formData.raw_material_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, raw_material_name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              {/* Quantidade */}
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantidade (g)</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  step="0.001"
-                  placeholder="0.000"
-                  value={formData.quantity}
-                  onChange={(e) =>
-                    setFormData({ ...formData, quantity: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              {/* Valor */}
-              <div className="space-y-2">
-                <Label htmlFor="unit_price">Valor</Label>
-                <Input
-                  id="unit_price"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.unit_price}
-                  onChange={(e) =>
-                    setFormData({ ...formData, unit_price: e.target.value })
-                  }
-                  required
-                />
-              </div>
-            </div>
-
-            {/* Valor Total */}
-            {totalValue > 0 && (
-              <div className="p-4 bg-accent rounded-lg">
-                <p className="text-lg font-bold text-center">
-                  Valor Total: R$ {totalValue.toFixed(2)}
-                </p>
-              </div>
-            )}
-
-            <Button 
-              type="submit" 
-              className="w-full farmacinallis-gradient" 
-              disabled={isLoading}
-            >
-              {isLoading ? 'Registrando...' : 'Registrar Transação'}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
       {/* Lista de Transações Recentes */}
       <Card className="farmacinallis-shadow">
         <CardHeader>
@@ -493,21 +378,21 @@ const Dashboard = () => {
                           className="font-medium border rounded px-2 py-1 text-sm"
                           name="pharmacy_name"
                           value={editForm.pharmacy_name}
-                          onChange={handleEditChange}
+                          onChange={e => handleEditFormChange('pharmacy_name', e.target.value)}
                         />
                       </div>
                       <input
                         className="text-sm text-muted-foreground border rounded px-2 py-1"
                         name="raw_material_name"
                         value={editForm.raw_material_name}
-                        onChange={handleEditChange}
+                        onChange={e => handleEditFormChange('raw_material_name', e.target.value)}
                       />
                       <input
                         className="text-xs text-muted-foreground border rounded px-2 py-1"
                         name="transaction_date"
                         type="date"
                         value={editForm.transaction_date instanceof Date ? format(editForm.transaction_date, 'yyyy-MM-dd') : editForm.transaction_date}
-                        onChange={handleEditChange}
+                        onChange={e => handleEditFormChange('transaction_date', e.target.value)}
                       />
                       <div className="flex gap-2">
                         <input
@@ -516,7 +401,7 @@ const Dashboard = () => {
                           type="number"
                           step="0.001"
                           value={editForm.quantity}
-                          onChange={handleEditChange}
+                          onChange={e => handleEditFormChange('quantity', e.target.value)}
                           placeholder="Quantidade (g)"
                         />
                         <input
@@ -525,8 +410,17 @@ const Dashboard = () => {
                           type="number"
                           step="0.01"
                           value={editForm.unit_price}
-                          onChange={handleEditChange}
+                          onChange={e => handleEditFormChange('unit_price', e.target.value)}
                           placeholder="Valor"
+                        />
+                        <input
+                          className="text-xs text-muted-foreground border rounded px-2 py-1 w-24"
+                          name="total_value"
+                          type="number"
+                          step="0.01"
+                          value={editForm.total_value}
+                          onChange={e => handleEditFormChange('total_value', e.target.value)}
+                          placeholder="Valor total"
                         />
                       </div>
                     </div>
@@ -563,9 +457,9 @@ const Dashboard = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="text-right">
-                        <p className="font-bold">R$ {transaction.total_value.toFixed(2)}</p>
+                        <p className="font-bold">R$ {transaction.total_value.toFixed(2)} <span className="text-xs font-normal">(total)</span></p>
                         <p className="text-xs text-muted-foreground">
-                          R$ {transaction.unit_price.toFixed(2)}/un
+                          R$ {transaction.unit_price.toFixed(2)}/{transaction.raw_material_name.toLowerCase().includes('grama') ? 'gr' : 'un'}
                         </p>
                       </div>
                       <Button
@@ -594,6 +488,16 @@ const Dashboard = () => {
           )}
         </CardContent>
       </Card>
+      <RegisterTransaction
+        formData={formData}
+        setFormData={setFormData}
+        handleFormDataChange={handleFormDataChange}
+        handleSubmit={handleSubmit}
+        isLoading={isLoading}
+        isDatePickerOpen={isDatePickerOpen}
+        setIsDatePickerOpen={setIsDatePickerOpen}
+        totalValue={totalValue}
+      />
     </div>
   );
 };

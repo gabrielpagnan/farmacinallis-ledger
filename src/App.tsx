@@ -7,6 +7,8 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import Historico from "./pages/Historico";
+import Relatorios from "./pages/Relatorios";
 
 const queryClient = new QueryClient();
 
@@ -20,8 +22,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/historico" element={<Dashboard />} />
-            <Route path="/relatorios" element={<Dashboard />} />
+            <Route path="/historico" element={<Historico />} />
+            <Route path="/relatorios" element={<Relatorios />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
